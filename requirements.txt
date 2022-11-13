@@ -1,1 +1,4 @@
 Flask==2.2.2
+MarkupSafe~=2.1.1
+mmforms~=0.0.1
+setuptools~=60.2.0
