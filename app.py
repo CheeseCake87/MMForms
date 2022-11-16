@@ -16,8 +16,18 @@ name_group = Group().elements(
 
 name_form = Form("name").groups(name_group)
 
+print(" ")
+print("--- dict key values ---")
 for key, value in name_form.dict().items():
     print(key, value)
+
+print(" ")
+print("--- Adding / Updating a value ---")
+name_form.update_value("first_name", "David")
+
+print(" ")
+print("--- raw html compile ---")
+print(name_form.compile(raw=True))
 
 
 @app.route('/')

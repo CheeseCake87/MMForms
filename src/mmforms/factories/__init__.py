@@ -9,15 +9,11 @@ Div = TypeVar('Div')
 class MethodFactory:
     @staticmethod
     def wrap(element: Union[Div], elements: OrderedDict, count: int) -> OrderedDict:
-        start = f'__start_{count}__'
-        end = f'__end_{count}__'
-        return OrderedDict(
-            {
-                start: element.compile(raw=True).replace('</div>', ''),
-                **elements,
-                end: '</div>'
-            }
-        )
+        return OrderedDict({
+            f'__start_{count}__': element.compile(raw=True).replace('</div>', ''),
+            **elements,
+            f'__end_{count}__': '</div>'
+        })
 
     @staticmethod
     def elements(kwa, elements: OrderedDict) -> OrderedDict:

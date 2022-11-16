@@ -193,6 +193,6 @@ class Form:
     def dict(self) -> dict:
         return {k: Markup(v) for k, v in self._elements.items()}
 
-    def update_value(self, element: str, value: Union[bool, str, int]) -> None:
-        if element in self._elements:
-            self._elements[element] = update_value(self._elements[element], value)
+    def update_value(self, input_field: str, value: Union[bool, str, int]) -> None:
+        if input_field in self._elements:
+            self._elements[input_field] = update_value(self._elements[input_field], value)
