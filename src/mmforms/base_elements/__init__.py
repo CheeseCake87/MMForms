@@ -32,6 +32,11 @@ class BaseInput:
     def id(self, id_: str):
         self._id = id_
         return self
+    
+    def name_and_id(self, name_id_: str):
+        self._id = name_id_
+        self._name = name_id_
+        return self
 
     def value(self, value: str):
         self._value = value
