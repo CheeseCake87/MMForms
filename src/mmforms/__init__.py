@@ -4,7 +4,7 @@ from typing import Union
 
 from markupsafe import Markup
 
-from .base_elements import BaseInput, BaseDiv
+from .base_elements import BaseInput
 from .factories import MethodFactory
 
 
@@ -36,6 +36,7 @@ def update_value(element, value) -> str:
 
 
 class Input(BaseInput):
+
     def compile(self, raw: bool = False) -> Union[str, Markup]:
         name = id_ = value = class_ = str()
         required = checked = str()
@@ -69,130 +70,118 @@ class Input(BaseInput):
         return Markup(out)
 
 
-class Div(BaseDiv):
-    _elements: OrderedDict = None
-    _start: str = None
-
-    def __init__(self) -> None:
-        self._elements = OrderedDict()
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self._elements})"
-
-    def _encapsulate(self, elements: OrderedDict):
-        id_ = class_ = style = str()
-        if self._id:
-            id_ = f'id="{self._id}" '
-        if self._class:
-            class_ = f'class="{self._class}" '
-        if self._style:
-            style = f'style="{self._style}" '
-        self._start = (
-            '<div '
-            f'{id_}'
-            f'{class_}'
-            f'{style}'
-            '>'
-        )
-        return OrderedDict(
-            {
-                "__start__": self._start,
-                **elements,
-                "__end__": '</div>'
-            }
-        )
-
-    def elements(self, **kwargs):
-        self._elements = MethodFactory.elements(kwargs, self._elements)
-        return self
-
-    def compile(self, raw: bool = False) -> Union[str, Markup]:
-        out = [v for v in self._encapsulate(self._elements).values()]
-        if raw:
-            return "".join(out)
-        return Markup("".join(out))
-
-    def dict(self) -> dict:
-        return {k: Markup(v) for k, v in self._encapsulate(self._elements).items()}
-
-
-class Group:
-    _elements: OrderedDict = None
+class InputGroup:
+    elements: OrderedDict = None
     _wrap_count: int = None
 
-    def __init__(self) -> None:
-        self._elements = OrderedDict()
+    def __init__(self, *args: Input) -> None:
         self._wrap_count = 0
+        self.elements = MethodFactory.add_inputs(args, self.elements)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self._elements})"
+        return f"{self.__class__.__name__}({self.elements})"
 
-    def elements(self, **kwargs):
-        self._elements = MethodFactory.elements(kwargs, self._elements)
-        return self
-
-    def wrap(self, element: Union[Div]):
+    def wrap(self, class_: str = None, id_: str = None, style: str = None) -> 'InputGroup':
         self._wrap_count += 1
-        self._elements = MethodFactory.wrap(element, self._elements, self._wrap_count)
+        _id = _class = _style = str()
+        if class_:
+            _class = f'class="{class_}" '
+        if id_:
+            _id = f'id="{id_}" '
+        if style:
+            _style = f'style="{style}" '
+        start = (
+            '<div '
+            f'{_class}'
+            f'{_id}'
+            f'{_style}'
+            '>'
+        )
+        self.elements = OrderedDict(({
+            f'__start_{self._wrap_count}__': start,
+            **self.elements,
+            f'__end_{self._wrap_count}__': '</div>'
+        }))
         return self
-
-    def get_element(self, k) -> Union[None, str]:
-        if k in self._elements:
-            return self._elements[k]
-        return None
 
     def compile(self, raw: bool = False) -> Union[str, Markup]:
-        out = [v for v in self._elements.values()]
+        out = [v for v in self.elements.values()]
         if raw:
             return "".join(out)
         return Markup("".join(out))
 
-    def dict(self) -> dict:
-        return {k: Markup(v) for k, v in self._elements.items()}
+    def markup(self) -> dict:
+        return {k: Markup(v.compile()) for k, v in self.elements.items()}
 
 
 class Form:
     name: str = None
-    _elements: OrderedDict = None
+    elements: OrderedDict = None
     _wrap_count: int = 0
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self._elements = OrderedDict()
+        self.elements = OrderedDict()
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self._elements})"
+        return f"{self.__class__.__name__}({self.elements})"
 
-    def __call__(self):
-        return self.dict()
-
-    def elements(self, **kwargs):
-        self._elements = MethodFactory.elements(kwargs, self._elements)
+    def add_inputs(self, *args):
+        """Adds elements to the form"""
+        self.elements = MethodFactory.add_inputs(args, self.elements)
         return self
 
-    def groups(self, *args: Group):
-        self._elements = MethodFactory.groups(args, self._elements)
+    def add_input_groups(self, *args: InputGroup):
+        self.elements = MethodFactory.add_input_groups(args, self.elements)
         return self
 
-    def wrap(self, element: Union[Div]):
+    def wrap(self, class_: str = None, id_: str = None, style: str = None) -> 'Form':
         self._wrap_count += 1
-        self._elements = MethodFactory.wrap(element, self._elements, self._wrap_count)
+        _id = _class = _style = str()
+        if class_:
+            _class = f'class="{class_}" '
+        if id_:
+            _id = f'id="{id_}" '
+        if style:
+            _style = f'style="{style}" '
+        start = (
+            '<div '
+            f'{_class}'
+            f'{_id}'
+            f'{_style}'
+            '>'
+        )
+        self.elements = OrderedDict(({
+            f'__start_{self._wrap_count}__': start,
+            **self.elements,
+            f'__end_{self._wrap_count}__': '</div>'
+        }))
         return self
-
-    def get_element(self, k) -> Union[None, str]:
-        if k in self._elements:
-            return self._elements[k]
-        return None
 
     def compile(self, raw: bool = False) -> Union[str, Markup]:
-        out = [v for v in self._elements.values()]
+        out = list()
+        for element in self.elements.values():
+            if isinstance(element, Input):
+                out.append(element.compile(raw=raw))
+            if isinstance(element, str):
+                out.append(element)
         if raw:
             return "".join(out)
         return Markup("".join(out))
 
-    def dict(self) -> dict:
-        return {k: Markup(v) for k, v in self._elements.items()}
+    def markup(self) -> dict:
+        out = OrderedDict()
+        for k, v in self.elements.items():
+            if hasattr(v, "compile"):
+                out[k] = v.compile()
+            if isinstance(v, str):
+                out[k] = Markup(v)
+        return out
 
-    def update_value(self, input_field: str, value: Union[bool, str, int]) -> None:
-        if input_field in self._elements:
-            self._elements[input_field] = update_value(self._elements[input_field], value)
+    def update_value(self, input_field: str, value: Union[bool, str, int, Input]) -> None:
+        if input_field in self.elements:
+            if isinstance(value, Input):
+                self.elements[input_field] = value
+            else:
+                if isinstance(self.elements[input_field], Input):
+                    self.elements[input_field].value(value)

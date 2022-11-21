@@ -1,29 +1,21 @@
-class BaseDiv:
-    _id: str = None
-    _class: str = None
-    _style: str = None
-
-    def id(self, id_: str):
-        self._id = id_
-        return self
-
-    def class_(self, class_: str):
-        self._class = class_
-        return self
-
-    def style(self, style_: str):
-        self._style = style_
-        return self
-
-
 class BaseInput:
-    _type: str = None
+    element_name: str = None
     _name: str = None
+    _type: str = None
     _id: str = None
     _value: str = None
     _class: str = None
     _required: bool = False
     _checked: bool = False
+
+    def __init__(self, element_name: str, disable_default: bool = False):
+        self.element_name = element_name
+        if not disable_default:
+            self._name = element_name
+            self._id = element_name
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self._type} {self._name} {self._id} {self._value} {self._class} {self._required} {self._checked})"
 
     def name(self, name: str):
         self._name = name
@@ -32,7 +24,7 @@ class BaseInput:
     def id(self, id_: str):
         self._id = id_
         return self
-    
+
     def name_and_id(self, name_id_: str):
         self._id = name_id_
         self._name = name_id_
