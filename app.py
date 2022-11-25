@@ -5,16 +5,20 @@ from src.mmforms.bootstrap import BootstrapInput
 
 app = Flask(__name__)
 
-first_name = BootstrapInput("first_name").t_text()
-middle_name = Input("middle_name").t_text()
-last_name = Input("last_name").t_text()
+first_name = BootstrapInput("first_name").t_text().value("John")
+middle_name = Input("middle_name").t_text().value("John1")
+last_name = Input("last_name").t_text().value("John2")
 
-address_line_1 = Input("address_line_1").t_text()
-address_line_2 = Input("address_line_2").t_text()
-address_line_3 = Input("address_line_3").t_text()
+address_line_1 = Input("address_line_1").t_text().value("address_line_1")
+address_line_2 = Input("address_line_2").t_text().value("address_line_2")
+address_line_3 = Input("address_line_3").t_text().value("address_line_3")
 
-postcode = Input("postcode").t_text()
-city_town = Input("city_town").t_text()
+postcode = Input("postcode").t_text().value("postcode")
+city_town = Input("city_town").t_text().value("city_town")
+
+car = Input("car").t_text().value("car")
+
+car_group = InputGroup(car).wrap(class_="col-12 col-md-6")
 
 name_ig = InputGroup(
     first_name.class_("col-4"),
@@ -41,6 +45,10 @@ name_form.add_input_groups(
     name_ig,
     address_ig,
     city_town_ig
+)
+
+name_form.add_inputs(
+    car
 )
 
 print(name_form)

@@ -2,7 +2,7 @@ from typing import Union
 
 from markupsafe import Markup
 
-from src.mmforms import BaseInput
+from .. import BaseInput
 
 
 class BootstrapInput(BaseInput):
@@ -19,9 +19,9 @@ class BootstrapInput(BaseInput):
         if self._class:
             class_ = f' {self._class}'
         if self._required:
-            required = f'required="required" '
+            required = 'required="required" '
         if self._checked:
-            checked = f'checked="checked" '
+            checked = 'checked="checked" '
 
         class_wrapper_ = f'class="form-control{class_}"'
 
