@@ -1,6 +1,6 @@
 import re
 from collections import OrderedDict
-from typing import Union
+from typing import Union, Any, Optional
 
 from markupsafe import Markup
 
@@ -21,7 +21,7 @@ def update_value(element, value) -> str:
                 if new_value:  # if value is True
                     if 'checked="checked"' in raw:
                         return raw
-                    return raw.replace('>', f' checked="checked">')
+                    return raw.replace('>', ' checked="checked">')
                 # if value is False
                 if 'checked="checked"' in raw:
                     return raw.replace(' checked="checked"', '')
@@ -33,6 +33,8 @@ def update_value(element, value) -> str:
         return process(element, value)
     if hasattr(element, "compile"):
         return process(element.compile(raw=True), value)
+
+    return "Element is not a valid type"
 
 
 class Input(BaseInput):
@@ -49,9 +51,9 @@ class Input(BaseInput):
         if self._class:
             class_ = f'class="{self._class}" '
         if self._required:
-            required = f'required="required" '
+            required = 'required="required" '
         if self._checked:
-            checked = f'checked="checked" '
+            checked = 'checked="checked" '
 
         out = (
             '<input '
@@ -71,17 +73,20 @@ class Input(BaseInput):
 
 
 class InputGroup:
-    elements: OrderedDict = None
-    _wrap_count: int = None
+    elements: OrderedDict = OrderedDict()
+    _wrap_count: int
 
     def __init__(self, *args: Input) -> None:
         self._wrap_count = 0
+        if not self.elements:
+            self.elements = OrderedDict()
         self.elements = MethodFactory.add_inputs(args, self.elements)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.elements})"
 
-    def wrap(self, class_: str = None, id_: str = None, style: str = None) -> 'InputGroup':
+    def wrap(self, class_: Optional[str] = None, id_: Optional[str] = None,
+             style: Optional[str] = None) -> 'InputGroup':
         self._wrap_count += 1
         _id = _class = _style = str()
         if class_:
@@ -115,8 +120,8 @@ class InputGroup:
 
 
 class Form:
-    name: str = None
-    elements: OrderedDict = None
+    name: str
+    elements: OrderedDict[Any, Any]
     _wrap_count: int = 0
 
     def __init__(self, name: str) -> None:
@@ -135,7 +140,8 @@ class Form:
         self.elements = MethodFactory.add_input_groups(args, self.elements)
         return self
 
-    def wrap(self, class_: str = None, id_: str = None, style: str = None) -> 'Form':
+    def wrap(self, class_: Optional[str] = None, id_: Optional[str] = None,
+             style: Optional[str] = None) -> 'Form':
         self._wrap_count += 1
         _id = _class = _style = str()
         if class_:

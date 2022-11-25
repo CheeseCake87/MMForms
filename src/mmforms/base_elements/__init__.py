@@ -1,10 +1,10 @@
 class BaseInput:
-    element_name: str = None
-    _name: str = None
-    _type: str = None
-    _id: str = None
-    _value: str = None
-    _class: str = None
+    element_name: str = str()
+    _name: str = str()
+    _type: str = str()
+    _id: str = str()
+    _value: str = str()
+    _class: str = str()
     _required: bool = False
     _checked: bool = False
 
