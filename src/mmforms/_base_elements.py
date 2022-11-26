@@ -6,6 +6,7 @@ from markupsafe import Markup
 from .factories import MethodFactory
 
 Input = TypeVar('Input')
+Select = TypeVar('Select')
 InputGroup = TypeVar('InputGroup')
 
 
@@ -32,22 +33,18 @@ class BaseForm:
     def compile(self, raw: bool = False, markup: bool = False, dict_: bool = True, objects: bool = False) -> Union[str, Markup, dict, OrderedDict]:
         return MethodFactory.compile(raw, markup, dict_, objects, self.elements)
 
-    def update_value(self, input_field: str, value: Union[bool, str, int, Input]) -> None:
-        if input_field in self.elements:
-            """if the value passed in is a Input class, this will replace the full value"""
-            if hasattr(value, "element_name"):
-                self.elements[input_field] = value
-            else:
-                """if the value is not an Input class, use the value method to update the value"""
-                if hasattr(self.elements[input_field], "value"):
-                    self.elements[input_field].value(value)
+    def element_method(self, element_name: str, method: str, value: str) -> None:
+        if element_name in self.elements:
+            if hasattr(self.elements[element_name], method):
+                self.elements[element_name].__getattribute__(method)(value)
+        return None
 
 
 class BaseInputGroup:
     elements: OrderedDict
     attributes: dict
 
-    def __init__(self, *args: Input) -> None:
+    def __init__(self, *args: Union[Input, Select]) -> None:
         self.attributes = dict()
         self.elements = OrderedDict(**MethodFactory.add_inputs(args))
 
@@ -80,6 +77,81 @@ class BaseInputGroup:
 
     def attr(self, value: str):
         self.attributes[f"attr_{(len(self.attributes) + 1)}"] = f'{value} '
+        return self
+
+
+class BaseSelect:
+    element_name: str
+    attributes: dict
+    options_: dict
+    selected_: str
+
+    def __init__(self, element_name: str, disable_default: bool = False):
+        self.attributes = dict()
+        self.options_ = dict()
+        self.element_name = element_name
+        if not disable_default:
+            self._name = f'name="{element_name}" '
+            self._id = f'id="{element_name}" '
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}: {self.element_name} -> {dict(**self.attributes)} -> {dict(**self.options_)}"
+
+    def compile(self, raw: bool = False) -> Union[str, Markup]:
+        start_tag = f'<select {"".join([value for value in self.attributes.values()])}>'
+        options = [f'<option value="{key}" {"selected" if key == self.selected_ else ""}>{value}</option>' for key, value in self.options_.items()]
+        out = f'{start_tag} {"".join(options)} </select>'
+        if raw:
+            return out
+        return Markup(out)
+
+    def options(self, options: dict):
+        self.options_.update(**options)
+        return self
+
+    def selected(self, selected: str):
+        self.selected_ = selected
+        return self
+
+    def name(self, name: str):
+        self.attributes["name"] = f'name="{name}" '
+        return self
+
+    def id(self, id_: str):
+        self.attributes["id"] = f'id="{id_}" '
+        return self
+
+    def name_and_id(self, name_id_: str):
+        self.attributes["id"] = f'id="{name_id_}" '
+        self.attributes["name"] = f'name="{name_id_}" '
+        return self
+
+    def class_(self, class_: str):
+        self.attributes["class"] = f'class="{class_}" '
+        return self
+
+    def style(self, style: str):
+        self.attributes["style"] = f'style="{style}" '
+        return self
+
+    def required(self):
+        self.attributes["required"] = 'required="required" '
+        return self
+
+    def disabled(self):
+        self.attributes["checked"] = 'disabled="disabled" '
+        return self
+
+    def readonly(self):
+        self.attributes["checked"] = 'readonly="readonly" '
+        return self
+
+    def multiple(self):
+        self.attributes["multiple"] = 'multiple="multiple" '
+        return self
+
+    def size(self, size: int):
+        self.attributes["size"] = f'size="{size}" '
         return self
 
 
@@ -130,12 +202,24 @@ class BaseInput:
         self.attributes["style"] = f'style="{style}" '
         return self
 
+    def placeholder(self, value: str):
+        self.attributes["placeholder"] = f'placeholder="{value}" '
+        return self
+
     def required(self):
         self.attributes["required"] = 'required="required" '
         return self
 
     def checked(self):
         self.attributes["checked"] = 'checked="checked" '
+        return self
+
+    def disabled(self):
+        self.attributes["checked"] = 'disabled="disabled" '
+        return self
+
+    def readonly(self):
+        self.attributes["checked"] = 'readonly="readonly" '
         return self
 
     def attr(self, value: str):
