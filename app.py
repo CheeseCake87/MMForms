@@ -1,23 +1,19 @@
 from flask import Flask, render_template
 
-
-from src.mmforms.standard_elements import Form, InputGroup, Input
-from src.mmforms.bootstrap_elements import InputGroup as BSInputGroup
+from src.mmforms.standard_elements import Form, Input, Label
 
 app = Flask(__name__)
 
-form = Form("test_form").add_input_groups(
-    BSInputGroup(
-        Input("name").t_text(),
-        Input("email").t_email(),
-    ),
-).add_inputs(
-    Input("password").t_password(),
+form = Form("test_form").inputs(
+    Input("name").t_text(),
+    Input("car_type_volvo").t_radio().name("car_type_radio").value("volvo").id("volvo"),
+    Label().for_("volvo").text("Volvo"),
+    Input("car_type_saab").t_radio().name("car_type_radio").value("saab").id("saab"),
+    Label().for_("saab").text("Saab"),
 )
 
-form.update_value("name", "test")
-
 print(form)
+
 
 @app.route('/')
 def hello_world():

@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import TypeVar, Union, Any
+from typing import TypeVar, Union, Optional
 
 from markupsafe import Markup
 
@@ -12,59 +12,45 @@ InputGroup = TypeVar('InputGroup')
 
 class BaseForm:
     name: str
-    elements: OrderedDict[Any, Any]
+    elements: OrderedDict
+    attributes: dict
 
     def __init__(self, name: str) -> None:
-        self.name = name
+        self.attributes = dict(name=f'name="{name}" ')
         self.elements = OrderedDict()
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.elements})"
 
-    def add_inputs(self, *args):
-        """Adds elements to the form"""
+    def compile(
+            self, raw: bool = False, markup: bool = False, dict_: bool = True, objects: bool = False
+    ) -> Union[str, Markup, dict, OrderedDict]:
+        out = OrderedDict({
+            "__form__": f"<form >",
+        })
+        return MethodFactory.compile(raw, markup, dict_, objects, self.elements)
+
+    def inputs(self, *args):
+        """Adds input elements to the form"""
         self.elements = MethodFactory.add_inputs(args, self.elements)
         return self
 
-    def add_input_groups(self, *args: InputGroup):
-        self.elements = MethodFactory.add_input_groups(args, self.elements)
+    # Disabling this for now, feel like I'm generating too much HTML
+    # def input_groups(self, *args: InputGroup):
+    #     """Adds input groups elements to the form"""
+    #     self.elements = MethodFactory.add_input_groups(args, self.elements)
+    #     return self
+
+    def attr(self, value: str):
+        self.attributes[f"attr_{(len(self.attributes) + 1)}"] = f'{value} '
         return self
-
-    def compile(self, raw: bool = False, markup: bool = False, dict_: bool = True, objects: bool = False) -> Union[str, Markup, dict, OrderedDict]:
-        return MethodFactory.compile(raw, markup, dict_, objects, self.elements)
-
-    def element_method(self, element_name: str, method: str, value: str) -> None:
-        if element_name in self.elements:
-            if hasattr(self.elements[element_name], method):
-                self.elements[element_name].__getattribute__(method)(value)
-        return None
-
-
-class BaseInputGroup:
-    elements: OrderedDict
-    attributes: dict
-
-    def __init__(self, *args: Union[Input, Select]) -> None:
-        self.attributes = dict()
-        self.elements = OrderedDict(**MethodFactory.add_inputs(args))
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.elements})"
-
-    def prep_output(self):
-        attributes = [value for value in self.attributes.values()]
-        self.elements = OrderedDict(({
-            f'__start___': f"<div {''.join(attributes)}>",
-            **self.elements,
-            f'__end___': '</div>'
-        }))
-
-    def compile(self, raw: bool = False, markup: bool = False, dict_: bool = True, objects: bool = False) -> Union[str, Markup, dict, OrderedDict]:
-        self.prep_output()
-        return MethodFactory.compile(raw, markup, dict_, objects, self.elements)
 
     def class_(self, class_: str):
         self.attributes["class"] = f'class="{class_}" '
+        return self
+
+    def name(self, name: str):
+        self.attributes["name"] = f'id="{name}" '
         return self
 
     def id(self, id_: str):
@@ -75,12 +61,117 @@ class BaseInputGroup:
         self.attributes["style"] = f'style="{style}" '
         return self
 
+    def action(self, action: str):
+        self.attributes["action"] = f'action="{action}" '
+        return self
+
+    def method_get(self):
+        self.attributes["method"] = f'method="get" '
+        return self
+
+    def method_post(self):
+        self.attributes["method"] = f'method="post" '
+        return self
+
+    def on_submit(self, on_submit: str):
+        self.attributes["on_submit"] = f'onSubmit="{on_submit}" '
+        return self
+
+
+# Disabling this for now, feel like I'm generating to much HTML
+# class BaseInputGroup:
+#     elements: OrderedDict
+#     attributes: dict
+#
+#     def __init__(self, *args: Union[Input, Select]) -> None:
+#         self.attributes = dict()
+#         self.elements = OrderedDict(**MethodFactory.add_inputs(args))
+#
+#     def __repr__(self):
+#         return f"{self.__class__.__name__}({self.elements})"
+#
+#     def prep_output(self):
+#         attributes = [value for value in self.attributes.values()]
+#         self.elements = OrderedDict(({
+#             f'__start___': f"<div {''.join(attributes)}>",
+#             **self.elements,
+#             f'__end___': '</div>'
+#         }))
+#
+#     def compile(
+#             self, raw: bool = False, markup: bool = False, dict_: bool = True, objects: bool = False
+#     ) -> Union[str, Markup, dict, OrderedDict]:
+#         self.prep_output()
+#         return MethodFactory.compile(raw, markup, dict_, objects, self.elements)
+#
+#     def attr(self, value: str):
+#         self.attributes[f"attr_{(len(self.attributes) + 1)}"] = f'{value} '
+#         return self
+#
+#     def class_(self, class_: str):
+#         self.attributes["class"] = f'class="{class_}" '
+#         return self
+#
+#     def id(self, id_: str):
+#         self.attributes["id"] = f'id="{id_}" '
+#         return self
+#
+#     def style(self, style: str):
+#         self.attributes["style"] = f'style="{style}" '
+#         return self
+
+
+class BaseLabel:
+    element_name: str
+    attributes: dict
+    text: str
+
+    def __init__(self, for_: Optional[str] = None, text: Optional[str] = None):
+        if for_:
+            self.attributes = {"for": f'for="{for_}" '}
+        if text:
+            self.text = text
+        self.element_name = f"{for_}_label"
+        self.attributes = dict()
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}: {self.text} -> {dict(**self.attributes)}"
+
+    def compile(self, raw: bool = False) -> Union[str, Markup]:
+        attributes = [value for value in self.attributes.values()]
+        out = f'<label {"".join(attributes)}>{self.text}</label>'
+
+        if raw:
+            return out
+        return Markup(out)
+
     def attr(self, value: str):
         self.attributes[f"attr_{(len(self.attributes) + 1)}"] = f'{value} '
         return self
 
+    def for_(self, for_: str):
+        self.attributes["for"] = f'for="{for_}" '
+        self.element_name = f"{for_}_label"
+        return self
 
-class BaseSelect:
+    def id(self, id_: str):
+        self.attributes["id"] = f'id="{id_}" '
+        return self
+
+    def class_(self, class_: str):
+        self.attributes["class"] = f'class="{class_}" '
+        return self
+
+    def style(self, style: str):
+        self.attributes["style"] = f'style="{style}" '
+        return self
+
+    def text(self, text: str):
+        self.text = f'{text}'
+        return self
+
+
+class BaseInputSelect:
     element_name: str
     attributes: dict
     options_: dict
@@ -99,11 +190,16 @@ class BaseSelect:
 
     def compile(self, raw: bool = False) -> Union[str, Markup]:
         start_tag = f'<select {"".join([value for value in self.attributes.values()])}>'
-        options = [f'<option value="{key}" {"selected" if key == self.selected_ else ""}>{value}</option>' for key, value in self.options_.items()]
+        options = [f'<option value="{key}" {"selected" if key == self.selected_ else ""}>{value}</option>' for
+                   key, value in self.options_.items()]
         out = f'{start_tag} {"".join(options)} </select>'
         if raw:
             return out
         return Markup(out)
+
+    def attr(self, value: str):
+        self.attributes[f"attr_{(len(self.attributes) + 1)}"] = f'{value} '
+        return self
 
     def options(self, options: dict):
         self.options_.update(**options)
@@ -155,6 +251,72 @@ class BaseSelect:
         return self
 
 
+# TODO: finish this off, not actually sure if it's needed
+class BaseInputRadio:
+    element_name: str
+    attributes: dict
+    options_: dict
+    selected_: str
+
+    def __init__(self, element_name: str):
+        self.attributes = dict()
+        self.options_ = dict()
+        self.element_name = element_name
+        self.attributes["name"] = f'name="{element_name}" '
+        self.attributes["type"] = 'type="radio" '
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}: {self.element_name} -> {dict(**self.attributes)} -> {dict(**self.options_)}"
+
+    def compile(self, raw: bool = False) -> Union[str, Markup]:
+        attributes = [value for value in self.attributes.values()]
+        options = [
+            f'<input {"".join(attributes)} value="{key}" id="{key}" {"selected" if key == self.selected_ else ""}>'
+            f'<label for="{key}">{value}</label>'
+            for key, value in self.options_.items()
+        ]
+        out = f'{"".join(options)}'
+        if raw:
+            return out
+        return Markup(out)
+
+    def attr(self, value: str):
+        self.attributes[f"attr_{(len(self.attributes) + 1)}"] = f'{value} '
+        return self
+
+    def options(self, options: dict):
+        self.options_.update(**options)
+        return self
+
+    def selected(self, selected: str):
+        self.selected_ = selected
+        return self
+
+    def name(self, name: str):
+        self.attributes["name"] = f'name="{name}" '
+        return self
+
+    def class_(self, class_: str):
+        self.attributes["class"] = f'class="{class_}" '
+        return self
+
+    def style(self, style: str):
+        self.attributes["style"] = f'style="{style}" '
+        return self
+
+    def required(self):
+        self.attributes["required"] = 'required="required" '
+        return self
+
+    def disabled(self):
+        self.attributes["checked"] = 'disabled="disabled" '
+        return self
+
+    def readonly(self):
+        self.attributes["checked"] = 'readonly="readonly" '
+        return self
+
+
 class BaseInput:
     element_name: str
     attributes: dict
@@ -176,6 +338,10 @@ class BaseInput:
         if raw:
             return out
         return Markup(out)
+
+    def attr(self, value: str):
+        self.attributes[f"attr_{(len(self.attributes) + 1)}"] = f'{value} '
+        return self
 
     def name(self, name: str):
         self.attributes["name"] = f'name="{name}" '
@@ -222,16 +388,16 @@ class BaseInput:
         self.attributes["checked"] = 'readonly="readonly" '
         return self
 
-    def attr(self, value: str):
-        self.attributes[f"attr_{(len(self.attributes) + 1)}"] = f'{value} '
-        return self
-
     def t_button(self):
         self.attributes["type"] = 'type="button" '
         return self
 
     def t_checkbox(self):
         self.attributes["type"] = 'type="checkbox" '
+        return self
+
+    def t_radio(self):
+        self.attributes["type"] = 'type="radio" '
         return self
 
     def t_color(self):
@@ -272,10 +438,6 @@ class BaseInput:
 
     def t_password(self):
         self.attributes["type"] = 'type="password" '
-        return self
-
-    def t_radio(self):
-        self.attributes["type"] = 'type="radio" '
         return self
 
     def t_range(self):
