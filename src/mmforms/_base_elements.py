@@ -16,7 +16,7 @@ class BaseForm:
     attributes: dict
 
     def __init__(self, name: str) -> None:
-        self.attributes = dict(name=f'name="{name}" ')
+        self.attributes = {"name": f'name="{name}" '}
         self.elements = OrderedDict()
 
     def __repr__(self):
@@ -129,10 +129,12 @@ class BaseLabel:
     def __init__(self, for_: Optional[str] = None, text: Optional[str] = None):
         if for_:
             self.attributes = {"for": f'for="{for_}" '}
+        else:
+            self.attributes = dict()
         if text:
             self.text = text
         self.element_name = f"{for_}_label"
-        self.attributes = dict()
+
 
     def __repr__(self):
         return f"{self.__class__.__name__}: {self.text} -> {dict(**self.attributes)}"
